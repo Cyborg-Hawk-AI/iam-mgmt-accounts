@@ -1,0 +1,52 @@
+Group Name	Attached Policies	AWSManaged	SS	Network	Master	Security	Audit	LogArchive	Prod	QA	Dev	BioProd	BioQA	BioDev		
+																
+MNGBioinformaticsAssistant					1							1	1	1		
+	ViewOnlyAccess	TRUE										1	1	1		
+	mng-policy-bio-user-assist-kms				1							1	1	1		
+	mng-policy-bio-user-assist-storage				1							1	1	1		
+	mng-policy-bio-user-assist-application				1							1	1	1		
+																
+MNGBioinformaticsDeveloper					1							1	1	1		
+	ViewOnlyAccess	TRUE										1	1			
+	mng-policy-bio-user-dev-iam				1								1	1		
+	mng-policy-bio-user-dev-kms				1							1	1	1		
+	mng-policy-bio-user-dev-storage				1							1	1	1		s3, efs
+	mng-policy-bio-user-dev-application				1							1	1	1		batch, cloudwatch, ec2, ecs, lambda, step functions, sns, sqs, etc
+																
+MNGBioinformaticsOperations												1	1	1		
+	ViewOnlyAccess	TRUE										1	1	1		
+	mng-policy-bio-user-operations-iam				1							1	1	1		
+	mng-policy-bio-user-operations-kms				1							1	1	1		
+	mng-policy-bio-user-operations-storage				1							1	1	1		
+	mng-policy-bio-user-operations-application				1							1	1	1		
+																
+MNGITAdministrator		TRUE	1	1	1	1	1	1	1	1	1	1	1	1		
+	AdministratorAccess	TRUE	1	1	1	1	1	1	1	1	1	1	1	1		all
+																
+MNGITDatabaseAdministrator					1				1	1	1					
+	DatabaseAdministrator	TRUE							1	1	1	1	1	1		
+																
+MNGITDeveloper					1				1	1	1					
+	AmazonElasticMapReduceFullAccess	TRUE								1	1					
+	AmazonEMRFullAccessPolicy_v2	TRUE								1	1					
+	AWSCodeArtifactAdminAccess	TRUE								1	1					
+	AWSCodeBuildDeveloperAccess	TRUE								1	1					
+	AWSCodeCommitPowerUser	TRUE								1	1					
+	AWSCodeDeployFullAccess	TRUE								1	1					
+	AWSLambda_FullAccess	TRUE								1	1					
+	mng-policy-it-user-dev-iam				1				1	1	1					iam
+	mng-policy-it-user-dev-kms				1				1	1	1					kms
+	mng-policy-it-user-dev-storage				1				1	1	1					s3, efs
+	mng-policy-it-user-dev-application				1				1	1	1					batch, cloudwatch, ec2, ecr, ecs, lambda, step functions, sns, sqs, etc
+																
+MNGITNetworkAdministrator		TRUE	1	1	1				1	1	1	1	1	1		
+	NetworkAdministrator	TRUE	1	1	1				1	1	1	1	1	1		
+																
+MNGITSecurityAdministrator		TRUE	1	1	1	1	1	1	1	1	1	1	1	1		
+	AmazonGuardDutyFullAccess	TRUE				1										
+	mng-policy-it-user-security-iam		1	1	1	1	1	1	1	1	1	1	1	1		iam
+	mng-policy-it-user-security-kms		1	1	1	1	1	1	1	1	1	1	1	1		kms
+	mng-policy-it-user-security-mgt		1	1	1	1	1	1	1	1	1	1	1	1		certificate manager
+																
+MNGITSystemAdministrator		TRUE	1	1	1	1	1	1	1	1	1	1	1	1		
+	SystemAdministrator	TRUE	1	1	1	1	1	1	1	1	1	1	1	1		IAM, Certificates, KMS
