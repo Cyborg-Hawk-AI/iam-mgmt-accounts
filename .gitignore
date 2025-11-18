@@ -1,0 +1,42 @@
+# AWS data files
+data/
+output/
+
+# Temporary files
+*.tmp
+*.swp
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+
+# AWS credentials (if any)
+.aws/
+credentials
+config
+
+# Python (if added later)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Node (if added later)
+node_modules/
+npm-debug.log*
+
