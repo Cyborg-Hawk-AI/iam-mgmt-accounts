@@ -40,8 +40,8 @@ usage() {
   echo "  If account dirs are already unpacked:"
   echo "    ./run_migration_workflow.sh --central-only"
   echo ""
-  echo "  Deliverables: audit/MIGRATION_PACK.md, audit/permission_sets_to_create.json,"
-  echo "               audit/customer-policies/*.json"
+  echo "  After a successful run you get: audit/MIGRATION_PACK.md, audit/MIGRATION_STATUS.md,"
+  echo "  audit/permission_sets_to_create.json, audit/customer-policies/*.json"
   echo ""
 }
 
@@ -76,15 +76,21 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$MODE" ]; then
+  echo -e "${RED}No mode specified. You must run with either --per-account or --central.${NC}"
+  echo ""
+  echo "  In each account (Phase 1):  ./run_migration_workflow.sh --per-account"
+  echo "  In central (Phase 2):       ./run_migration_workflow.sh --central"
+  echo ""
   usage
-  exit 0
+  exit 1
 fi
 
 # --- Phase 1: Per-account discovery and bundle ---
 if [ "$MODE" = "per-account" ]; then
-  echo -e "${BLUE}Phase 1: Discovery in this account + bundle${NC}"
+  echo -e "${BLUE}Phase 1: SSO-only discovery (Identity Center roles) + bundle${NC}"
+  echo "  IAM users, service roles, and non-SSO roles are not collected."
   echo ""
-  exec ./discover_and_upload.sh --bundle
+  exec ./discover_and_upload.sh --bundle --sso-only
 fi
 
 # --- Phase 2: Central aggregate → audit → migration pack ---

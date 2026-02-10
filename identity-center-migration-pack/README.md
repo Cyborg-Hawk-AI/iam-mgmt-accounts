@@ -65,13 +65,21 @@ Expand-Archive -Path "iam-mgmt-accounts.zip" -DestinationPath "." -Force
 
 ## What problem this solves
 
-You are moving **several AWS accounts** from one Identity Center org to another. You need to:
+You are moving **human user access** from one Identity Center org to another. You need to:
 
 - Know exactly **which permission sets** to create in the new org (and what policies to attach).
 - Have **custom (customer-managed) policies** saved as separate files so you can recreate them in the target accounts.
 - Get a **human-readable guide** so you can manually create permission sets and groups and assign users without losing access.
 
-This pack does that: it audits the **SSO roles** (Identity Center–created roles) in your accounts, extracts the policies attached to each, and produces one migration guide plus exported custom policies.
+This pack does that: it discovers and audits **only SSO roles** (Identity Center–created roles, `AWSReservedSSO_*`) in each account, extracts the policies attached to each, and produces one migration guide plus exported custom policies.
+
+---
+
+## Scope: Identity Center user access only
+
+- **In scope:** Permission sets and the policies attached to them — i.e. what **human users** get when they sign in via Identity Center. We only discover **SSO roles** (`AWSReservedSSO_*`) and their managed/inline policies.
+- **Out of scope (unchanged):** IAM users, IAM groups, service roles (e.g. EC2, Lambda), and any other IAM roles. They stay as-is in each account. This pack does not collect or migrate them.
+- **Default:** `run_migration_workflow.sh --per-account` uses **SSO-only discovery** so only Identity Center roles and their policies are collected. Use `discover_and_upload.sh` without `--sso-only` only if you need full IAM discovery for other purposes.
 
 ---
 
@@ -100,11 +108,11 @@ You then **manually** in the new org: create permission sets (using the guide), 
    ```bash
    ./run_migration_workflow.sh --per-account
    ```
-   (This runs discovery and creates the bundle; same as `./discover_and_upload.sh --bundle`.)
+   (This runs **SSO-only** discovery — only Identity Center roles and their policies — and creates the bundle; same as `./discover_and_upload.sh --bundle --sso-only`.)
 3. Download the file it creates: `XXXXXXXXXXXX-iam-discovery.tar.gz` (12-digit account ID).
 4. Repeat in the other 5 accounts. You should have **6 tarballs**.
 
-**What this does:** In that account it discovers IAM (users, roles, groups, policies), runs analysis and reports, and packs everything into one tarball per account. It only reads from AWS; it does not change anything.
+**What this does:** In that account it discovers **only SSO roles** (Identity Center permission-set roles) and their policies, then packs that into one tarball per account. IAM users, service roles, and other IAM are not collected. It only reads from AWS; it does not change anything.
 
 ---
 
@@ -130,7 +138,8 @@ You then **manually** in the new org: create permission sets (using the guide), 
 | **README.md** | This file – what you get, how you get it, how it solves the issue. |
 | **WHAT_YOU_GET.md** | Presentable summary of deliverables for your team. |
 | **generate_boss_report.sh** | Generates audit/MIGRATION_STATUS.md from real data (run automatically in --central). |
-| **discover_iam.sh** | Called by workflow: lists IAM users, roles, groups, and policies in one account. |
+| **discover_sso_only.sh** | **Used by default for migration.** Discovers only SSO roles (`AWSReservedSSO_*`) and their policies; no IAM users or service roles. |
+| **discover_iam.sh** | Full IAM discovery (users, roles, groups, policies); use only if you need it for other purposes. |
 | **analyze_policies.sh** | Called by workflow: analyzes policy overlaps (used for reports). |
 | **generate_reports.sh** | Called by workflow: writes CSV reports. |
 | **discover_and_upload.sh** | Used by run_migration_workflow.sh --per-account. |
@@ -178,4 +187,16 @@ Replace `ACCOUNT_ID` with the 12-digit id (e.g. `123456789012`).
 
 ---
 
-You don’t need anything outside this folder. This README plus the 7 scripts are the full set.
+You don’t need anything outside this folder. This README plus the scripts are the full set.
+
+---
+
+## Testing / validation
+
+The pipeline has been tested with:
+
+- **SSO-only discovery data:** One account with 2 SSO roles (AdminAccess, ReadOnlyAccess) and 1 customer-managed policy. Aggregate → audit → migration pack → boss report all complete successfully; `audit/MIGRATION_PACK.md`, `audit/MIGRATION_STATUS.md`, `audit/permission_sets_to_create.json`, and `audit/customer-policies/` contain the expected content.
+- **Full workflow entry point:** `./run_migration_workflow.sh --central-only` with account dirs present runs all steps and prints the deliverables.
+- **No mode:** `./run_migration_workflow.sh` with no arguments prints an error and usage (exit 1).
+- **Per-account SSO-only:** `./discover_and_upload.sh --bundle --sso-only` runs SSO-only discovery and creates the tarball (analyze/reports skipped); `run_migration_workflow.sh --per-account` uses this by default.
+- **Mixed accounts:** Central run with one account that has SSO roles and one with zero SSO roles; aggregate and audit produce correct counts and permission set list.

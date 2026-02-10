@@ -17,8 +17,11 @@
 #   --discover-only      Only run discover_iam.sh; skip analyze, reports, upload
 #   --skip-upload        Run discover + analyze + reports but do not upload (for local use)
 #   --bundle             Create {account_id}-iam-discovery.tar.gz for easy download to central
+#   --sso-only           Identity Center migration only: discover only SSO roles (AWSReservedSSO_*)
+#                        and their policies. Skip IAM users, groups, and non-SSO roles. (Default for
+#                        run_migration_workflow.sh --per-account.)
 #
-# Requires: discover_iam.sh, analyze_policies.sh, generate_reports.sh in same directory.
+# Requires: discover_iam.sh or discover_sso_only.sh (when --sso-only), analyze_policies.sh, generate_reports.sh in same directory.
 # For upload: AWS credentials with s3:PutObject on the bucket.
 
 set -euo pipefail
@@ -31,9 +34,14 @@ S3_PREFIX="iam-migration/discovery"
 DISCOVER_ONLY=false
 SKIP_UPLOAD=false
 BUNDLE=false
+SSO_ONLY=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --sso-only)
+      SSO_ONLY=true
+      shift
+      ;;
     --s3-bucket)
       S3_BUCKET="$2"
       shift 2
@@ -84,10 +92,16 @@ echo -e "${GREEN}Account ID: $ACCOUNT_ID${NC}"
 echo -e "${GREEN}Output dir: $ACCOUNT_DIR/${NC}"
 echo ""
 
-# 1. Discover
-echo -e "${YELLOW}Step 1: Discovering IAM resources...${NC}"
-OUTPUT_FILE="$ACCOUNT_DIR/data/raw/iam_discovery.json" \
-  ./discover_iam.sh --output "$ACCOUNT_DIR/data/raw/iam_discovery.json"
+# 1. Discover (SSO-only for IdC migration, or full IAM)
+if [ "$SSO_ONLY" = true ]; then
+  echo -e "${YELLOW}Step 1: Discovering SSO roles only (Identity Center user access)...${NC}"
+  OUTPUT_FILE="$ACCOUNT_DIR/data/raw/iam_discovery.json" \
+    ./discover_sso_only.sh --output "$ACCOUNT_DIR/data/raw/iam_discovery.json"
+else
+  echo -e "${YELLOW}Step 1: Discovering IAM resources (full)...${NC}"
+  OUTPUT_FILE="$ACCOUNT_DIR/data/raw/iam_discovery.json" \
+    ./discover_iam.sh --output "$ACCOUNT_DIR/data/raw/iam_discovery.json"
+fi
 
 if [ ! -f "$ACCOUNT_DIR/data/raw/iam_discovery.json" ]; then
   echo -e "${RED}Discovery failed (no output file).${NC}"
@@ -108,31 +122,34 @@ if [ "$DISCOVER_ONLY" = true ]; then
   exit 0
 fi
 
-# 2. Analyze
-echo -e "${YELLOW}Step 2: Analyzing policies...${NC}"
-./analyze_policies.sh \
-  --input "$ACCOUNT_DIR/data/raw/iam_discovery.json" \
-  --output "$ACCOUNT_DIR/data/processed"
+# 2. Analyze and 3. Reports (skip for SSO-only; we only need the discovery for migration pack)
+if [ "$SSO_ONLY" != true ]; then
+  echo -e "${YELLOW}Step 2: Analyzing policies...${NC}"
+  ./analyze_policies.sh \
+    --input "$ACCOUNT_DIR/data/raw/iam_discovery.json" \
+    --output "$ACCOUNT_DIR/data/processed"
 
-# 3. Reports
-echo -e "${YELLOW}Step 3: Generating reports...${NC}"
-INPUT_DIR="$ACCOUNT_DIR/data/processed" \
-OUTPUT_DIR="$ACCOUNT_DIR/output/reports" \
-DISCOVERY_FILE="$ACCOUNT_DIR/data/raw/iam_discovery.json" \
-  ./generate_reports.sh
+  echo -e "${YELLOW}Step 3: Generating reports...${NC}"
+  INPUT_DIR="$ACCOUNT_DIR/data/processed" \
+  OUTPUT_DIR="$ACCOUNT_DIR/output/reports" \
+  DISCOVERY_FILE="$ACCOUNT_DIR/data/raw/iam_discovery.json" \
+    ./generate_reports.sh
 
-echo ""
-echo -e "${GREEN}Reports in $ACCOUNT_DIR/output/reports/${NC}"
-ls -la "$ACCOUNT_DIR/output/reports/" 2>/dev/null || true
-echo ""
+  echo ""
+  echo -e "${GREEN}Reports in $ACCOUNT_DIR/output/reports/${NC}"
+  ls -la "$ACCOUNT_DIR/output/reports/" 2>/dev/null || true
+  echo ""
+fi
 
 # 4. Upload to S3 (optional)
 if [ -n "$S3_BUCKET" ] && [ "$SKIP_UPLOAD" != true ]; then
   echo -e "${YELLOW}Step 4: Uploading to S3...${NC}"
   S3_BASE="s3://${S3_BUCKET}/${S3_PREFIX}/${ACCOUNT_ID}"
   aws s3 cp "$ACCOUNT_DIR/data/raw/iam_discovery.json" "${S3_BASE}/data/raw/iam_discovery.json"
-  aws s3 cp "$ACCOUNT_DIR/data/processed/" "${S3_BASE}/data/processed/" --recursive
-  aws s3 cp "$ACCOUNT_DIR/output/reports/" "${S3_BASE}/output/reports/" --recursive
+  if [ "$SSO_ONLY" != true ] && [ -d "$ACCOUNT_DIR/data/processed" ]; then
+    aws s3 cp "$ACCOUNT_DIR/data/processed/" "${S3_BASE}/data/processed/" --recursive
+    aws s3 cp "$ACCOUNT_DIR/output/reports/" "${S3_BASE}/output/reports/" --recursive
+  fi
   echo -e "${GREEN}Uploaded to ${S3_BASE}/${NC}"
 else
   if [ -z "$S3_BUCKET" ]; then

@@ -6,9 +6,10 @@
 
 ## The goal
 
-- Migrate **multiple AWS accounts** from the current Identity Center (IdC) org to a **new IdC org**.
-- **No one loses access:** we know exactly which permission sets and policies to recreate.
-- **Custom (customer-managed) policies** are exported as JSON so they can be recreated in the target accounts and attached to the right permission sets.
+- Migrate **human user access** from the current Identity Center (IdC) org to a **new IdC org** (permission sets and what’s attached to them).
+- **No one loses access:** we know exactly which permission sets and policies to recreate for IdC users.
+- **Custom (customer-managed) policies** attached to those permission sets are exported as JSON so you can recreate them in the target accounts.
+- **IAM users, service roles, and non-SSO roles stay in place** — we only discover and migrate **SSO roles** (Identity Center–created roles, `AWSReservedSSO_*`) and their policies.
 
 ---
 
@@ -62,7 +63,8 @@ After running the pack (see “How you get it” below), you have a single place
 
 ## Scripts and APIs (vetted)
 
-- **discover_iam.sh** — Uses standard IAM read-only APIs: `list-users`, `list-roles`, `list-groups`, `get-policy`, `get-policy-version`, `list-attached-*`, `list-*-policies`, `get-*-policy`. No writes.  
+- **discover_sso_only.sh** (default for migration) — Discovers only roles whose name starts with `AWSReservedSSO_` and their attached policies; no IAM users, groups, or other roles. Uses `list-roles`, `list-attached-role-policies`, `list-role-policies`, `get-role-policy`, `get-policy`, `get-policy-version`. No writes.  
+- **discover_iam.sh** — Full IAM discovery (all users, roles, groups, policies); use only if you need it.  
 - **audit_sso_roles.sh** — Reads discovery JSON (or live IAM with `list-roles`, `list-attached-role-policies`, `list-role-policies`, `get-role-policy`). No writes.  
 - **generate_migration_pack.sh** — Reads audit output and discovery/aggregated JSON; writes only to local `audit/` (markdown, manifest, policy JSONs).  
 - **aggregate_all_accounts.sh** — Reads only local discovery files; writes only to local `aggregated/`.  
