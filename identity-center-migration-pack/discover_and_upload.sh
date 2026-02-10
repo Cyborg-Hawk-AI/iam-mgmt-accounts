@@ -116,6 +116,17 @@ fi
 echo -e "${GREEN}Discovery saved to $ACCOUNT_DIR/data/raw/iam_discovery.json${NC}"
 echo ""
 
+# When SSO-only: generate per-account human-readable report and policies-per-role under data/processed
+if [ "$SSO_ONLY" = true ]; then
+  echo -e "${YELLOW}Step 2: Generating per-account report (policies per SSO role)...${NC}"
+  ./generate_sso_per_account_report.sh \
+    --input "$ACCOUNT_DIR/data/raw/iam_discovery.json" \
+    --output-dir "$ACCOUNT_DIR/data/processed"
+  echo -e "${GREEN}Report and policy JSON in $ACCOUNT_DIR/data/processed/${NC}"
+  echo "  Open SSO_ROLES_AND_POLICIES.md for a boss-ready summary."
+  echo ""
+fi
+
 if [ "$DISCOVER_ONLY" = true ]; then
   echo -e "${BLUE}Discover-only: skipping analyze, reports, and upload.${NC}"
   if [ -n "$S3_BUCKET" ] && [ "$SKIP_UPLOAD" != true ]; then
@@ -151,8 +162,10 @@ if [ -n "$S3_BUCKET" ] && [ "$SKIP_UPLOAD" != true ]; then
   echo -e "${YELLOW}Step 4: Uploading to S3...${NC}"
   S3_BASE="s3://${S3_BUCKET}/${S3_PREFIX}/${ACCOUNT_ID}"
   aws s3 cp "$ACCOUNT_DIR/data/raw/iam_discovery.json" "${S3_BASE}/data/raw/iam_discovery.json"
-  if [ "$SSO_ONLY" != true ] && [ -d "$ACCOUNT_DIR/data/processed" ]; then
+  if [ -d "$ACCOUNT_DIR/data/processed" ]; then
     aws s3 cp "$ACCOUNT_DIR/data/processed/" "${S3_BASE}/data/processed/" --recursive
+  fi
+  if [ "$SSO_ONLY" != true ] && [ -d "$ACCOUNT_DIR/output/reports" ]; then
     aws s3 cp "$ACCOUNT_DIR/output/reports/" "${S3_BASE}/output/reports/" --recursive
   fi
   echo -e "${GREEN}Uploaded to ${S3_BASE}/${NC}"
