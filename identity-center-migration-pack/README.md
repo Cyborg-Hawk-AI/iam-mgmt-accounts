@@ -8,6 +8,61 @@
 
 ---
 
+## Get this repo (download or clone)
+
+Repo: **https://github.com/Cyborg-Hawk-AI/iam-mgmt-accounts**  
+This pack is in the **`identity-center-migration-pack/`** subdirectory.
+
+### Bash (Linux / macOS / Git Bash)
+
+**Download as ZIP (no Git):**
+```bash
+curl -L -o iam-mgmt-accounts.zip https://github.com/Cyborg-Hawk-AI/iam-mgmt-accounts/archive/refs/heads/main.zip
+unzip iam-mgmt-accounts.zip
+cd iam-mgmt-accounts-main/identity-center-migration-pack
+```
+
+**Clone with Git (first time):**
+```bash
+git clone https://github.com/Cyborg-Hawk-AI/iam-mgmt-accounts.git
+cd iam-mgmt-accounts/identity-center-migration-pack
+```
+
+**Pull latest (already cloned):**
+```bash
+cd iam-mgmt-accounts
+git pull origin main
+```
+
+### PowerShell (Windows)
+
+**Download as ZIP (no Git):**
+```powershell
+Invoke-WebRequest -Uri "https://github.com/Cyborg-Hawk-AI/iam-mgmt-accounts/archive/refs/heads/main.zip" -OutFile "iam-mgmt-accounts.zip" -UseBasicParsing
+Expand-Archive -Path "iam-mgmt-accounts.zip" -DestinationPath "." -Force
+cd iam-mgmt-accounts-main\identity-center-migration-pack
+```
+
+**Clone with Git (first time):**
+```powershell
+git clone https://github.com/Cyborg-Hawk-AI/iam-mgmt-accounts.git
+cd iam-mgmt-accounts\identity-center-migration-pack
+```
+
+**Pull latest (already cloned):**
+```powershell
+cd iam-mgmt-accounts
+git pull origin main
+```
+
+**Using real curl.exe (if installed):**
+```powershell
+curl.exe -L -o iam-mgmt-accounts.zip "https://github.com/Cyborg-Hawk-AI/iam-mgmt-accounts/archive/refs/heads/main.zip"
+Expand-Archive -Path "iam-mgmt-accounts.zip" -DestinationPath "." -Force
+```
+
+---
+
 ## What problem this solves
 
 You are moving **several AWS accounts** from one Identity Center org to another. You need to:
