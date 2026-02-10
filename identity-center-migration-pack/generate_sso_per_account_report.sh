@@ -12,8 +12,10 @@
 #
 # Output under output-dir:
 #   SSO_ROLES_AND_POLICIES.md  - Human-readable: one section per SSO role, policies listed
-#   policies_per_role.json     - Machine-readable: role name -> attached policies
-#   customer-policies/*.json   - Policy documents (customer-managed + inline) for retrieval
+#   policies_per_role.json       - Machine-readable: role name -> attached policies
+#   policies_per_role_table.md   - Same info in table format (Markdown)
+#   policies_per_role_table.csv  - Same info in table format (CSV, e.g. Excel)
+#   customer-policies/*.json     - Policy documents (customer-managed + inline) for retrieval
 #
 
 set -euo pipefail
@@ -86,6 +88,37 @@ jq -c '
   }]
 ' "$INPUT_FILE" > "$OUTPUT_DIR/policies_per_role.json"
 
+# --- 3b. Same information in table format (Markdown + CSV) ---
+CSV="$OUTPUT_DIR/policies_per_role_table.csv"
+{
+  echo "SSO Role,Policy type,Policy (ARN or name),Document file"
+  jq -r '
+    def sanitize: gsub(" "; "-") | gsub("/"; "-");
+    [.roles[] | .name as $r |
+      ( .attached_managed_policies[]?.PolicyArn | select(startswith("arn:aws:iam::aws:policy/")) | [$r, "AWS-managed", ., "-"] ),
+      ( .attached_managed_policies[]?.PolicyArn | select(startswith("arn:aws:iam::aws:policy/") | not) | [$r, "Customer-managed", ., ("customer-policies/" + (split("/") | last) + ".json")] ),
+      ( .inline_policies[]? | [$r, "Inline", .name, ("customer-policies/inline-" + ($r | sanitize) + "-" + (.name | sanitize) + ".json")] )
+    ] | .[] | @csv
+  ' "$INPUT_FILE" 2>/dev/null
+} > "$CSV"
+
+# Markdown table
+MD_TABLE="$OUTPUT_DIR/policies_per_role_table.md"
+{
+  echo "# Policies per SSO role (table) — Account $ACCOUNT_ID"
+  echo ""
+  echo "| SSO Role | Policy type | Policy (ARN or name) | Document file |"
+  echo "|----------|-------------|------------------------|---------------|"
+  jq -r '
+    def sanitize: gsub(" "; "-") | gsub("/"; "-");
+    [.roles[] | .name as $r |
+      ( .attached_managed_policies[]?.PolicyArn | select(startswith("arn:aws:iam::aws:policy/")) | [$r, "AWS-managed", ., "-"] ),
+      ( .attached_managed_policies[]?.PolicyArn | select(startswith("arn:aws:iam::aws:policy/") | not) | [$r, "Customer-managed", ., ("customer-policies/" + (split("/") | last) + ".json")] ),
+      ( .inline_policies[]? | [$r, "Inline", .name, ("customer-policies/inline-" + ($r | sanitize) + "-" + (.name | sanitize) + ".json")] )
+    ] | .[] | "| " + .[0] + " | " + .[1] + " | " + .[2] + " | " + .[3] + " |"
+  ' "$INPUT_FILE" 2>/dev/null
+} > "$MD_TABLE"
+
 # --- 4. Build SSO_ROLES_AND_POLICIES.md (human-readable, boss-presentable) ---
 MD="$OUTPUT_DIR/SSO_ROLES_AND_POLICIES.md"
 {
@@ -142,6 +175,8 @@ MD="$OUTPUT_DIR/SSO_ROLES_AND_POLICIES.md"
   echo "|------|---------|"
   echo "| \`SSO_ROLES_AND_POLICIES.md\` | This report — policies per SSO role |"
   echo "| \`policies_per_role.json\` | Machine-readable list of policies per role |"
+  echo "| \`policies_per_role_table.md\` | Same information in table format (Markdown) |"
+  echo "| \`policies_per_role_table.csv\` | Same information in table format (CSV, e.g. for Excel) |"
   echo "| \`customer-policies/*.json\` | Policy documents (JSON) for customer-managed and inline policies |"
   echo ""
 } > "$MD"
@@ -155,11 +190,13 @@ README="$OUTPUT_DIR/README.md"
   echo ""
   echo "- \`SSO_ROLES_AND_POLICIES.md\` — Human-readable report (policies per role)"
   echo "- \`policies_per_role.json\` — Machine-readable (role → policies)"
+  echo "- \`policies_per_role_table.md\` / \`policies_per_role_table.csv\` — Same data in table format"
   echo "- \`customer-policies/*.json\` — Policy documents in JSON so you can retrieve and reuse them"
   echo ""
 } > "$README"
 
 echo "  SSO_ROLES_AND_POLICIES.md (human-readable, policies per role)"
 echo "  policies_per_role.json"
+echo "  policies_per_role_table.md, policies_per_role_table.csv (table format)"
 echo "  customer-policies/*.json (policy documents)"
 echo "  README.md"
