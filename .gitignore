@@ -11,6 +11,13 @@ output/
 # OS files
 .DS_Store
 Thumbs.db
+._*
+
+# Generated / output
+aggregated/
+audit/
+*-iam-discovery.tar.gz
+test-validate/
 
 # IDE files
 .vscode/

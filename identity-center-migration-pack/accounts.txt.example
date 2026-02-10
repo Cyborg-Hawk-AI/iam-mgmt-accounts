@@ -1,0 +1,13 @@
+# Account IDs to include for assignment export (one per line).
+# Use the same accounts you run --per-account discovery in.
+# From IAM Users Requirements (002).xlsx, Migrate?=YES accounts:
+897951724172
+145716576155
+014756875833
+224053811153
+733961910710
+120529854533
+447465199726
+182461150491
+270812177724
+210505675092

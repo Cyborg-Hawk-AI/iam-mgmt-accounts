@@ -1,6 +1,7 @@
 # Generated at runtime (do not commit)
 audit/
 aggregated/
+identity_center/
 *-iam-discovery.tar.gz
 [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/
 # Local test run (optional)

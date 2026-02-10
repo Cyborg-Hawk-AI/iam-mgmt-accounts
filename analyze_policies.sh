@@ -245,13 +245,15 @@ CONSOLIDATION_FILE="${OUTPUT_DIR}/consolidation_candidates.json"
 # Sort overlaps by similarity
 TOP_OVERLAPS=$(jq -c ".managed_policy_overlaps | sort_by(-.similarity) | .[0:10]" "$OVERLAPS_FILE" 2>/dev/null || echo "[]")
 
-# Build consolidation recommendations
-RECOMMENDATIONS=$(jq -c '.managed_policy_overlaps[] | select(.similarity >= 0.8) | {
+# Build consolidation recommendations (ensure it's a JSON array)
+RECOMMENDATIONS=$(jq -c '[.managed_policy_overlaps[] | select(.similarity >= 0.8) | {
   policy_a: .policy_a,
   policy_b: .policy_b,
   overlap_percent: (.similarity * 100),
+  unique_actions_a: .unique_actions_a,
+  unique_actions_b: .unique_actions_b,
   recommendation: (if .unique_actions_a == 0 then "REPLACE_A_WITH_B" elif .unique_actions_b == 0 then "REPLACE_B_WITH_A" else "CONSOLIDATE" end)
-}' "$OVERLAPS_FILE" 2>/dev/null || echo "[]")
+}]' "$OVERLAPS_FILE" 2>/dev/null || echo "[]")
 
 cat > "$CONSOLIDATION_FILE" <<EOF
 {
