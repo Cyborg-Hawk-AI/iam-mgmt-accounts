@@ -125,12 +125,31 @@ echo "$MANIFEST_JSON" | jq '.' > "$CUSTOMER_POLICIES_DIR/manifest.json"
 echo -e "${GREEN}  $CUSTOMER_POLICIES_DIR/manifest.json${NC}"
 echo -e "${GREEN}  $CUSTOMER_POLICIES_DIR/*.json (policy documents)${NC}"
 
+# Export each inline policy as a retrievable JSON file (permission-set + policy name)
+echo -e "${YELLOW}Exporting inline policy documents to JSON files...${NC}"
+jq -c '.[] | .permission_set_name as $ps | .inline_policies[]? | {ps: $ps, name: .name, document: .document}' "$PERM_SETS_FILE" 2>/dev/null | while read -r line; do
+  [ -z "$line" ] && continue
+  ps=$(echo "$line" | jq -r '.ps')
+  name=$(echo "$line" | jq -r '.name')
+  doc=$(echo "$line" | jq -c '.document')
+  safe_ps=$(echo "$ps" | tr -d '[:space:]' | tr '/' '-')
+  safe_name=$(echo "$name" | tr -d '[:space:]' | tr '/' '-')
+  fname="inline-${safe_ps}-${safe_name}.json"
+  echo "$doc" | jq '.' > "$CUSTOMER_POLICIES_DIR/$fname"
+done
+echo -e "${GREEN}  $CUSTOMER_POLICIES_DIR/inline-*.json (inline policy documents)${NC}"
+
 # Human-readable migration pack
 echo -e "${YELLOW}Writing $PACK_MD${NC}"
 {
   echo "# Identity Center Migration Pack"
   echo ""
-  echo "Use this pack to **pre-create permission sets and groups** in the destination org, then assign users to groups. Custom (customer-managed) policies are stored under \`customer-policies/\` so you can recreate them if needed."
+  echo "## What this pack does"
+  echo ""
+  echo "We discover **SSO roles** (AWSReservedSSO_*) in each account, collect **all policies attached** to each (AWS-managed, customer-managed, and inline), and produce:"
+  echo "- This **human-readable guide** (what to create, what to attach)."
+  echo "- **All policies as JSON** in \`customer-policies/\` so you can retrieve and reuse them."
+  echo "You can then replicate each permission set in your own Identity Center with the same policies attached."
   echo ""
   echo "---"
   echo ""
@@ -139,16 +158,20 @@ echo -e "${YELLOW}Writing $PACK_MD${NC}"
   echo ""
   echo "Create each permission set in the destination Identity Center, then attach the listed policies."
   echo ""
-  jq -r '.[] | "
-### \(.permission_set_name)
+  jq -r '
+    .[] |
+    .permission_set_name as $ps |
+    (if (.inline_policies | length) > 0 then [.inline_policies[] | "customer-policies/inline-" + ($ps | gsub(" "; "") | gsub("/"; "-")) + "-" + (.name | gsub(" "; "") | gsub("/"; "-")) + ".json"] else [] end) as $inline_files |
+    "
+### " + .permission_set_name + "
 
 - **AWS-managed policies** (attach by ARN in Identity Center):"
     + (if (.aws_managed_policy_arns | length) > 0 then "\n" + ([.aws_managed_policy_arns[]] | map("  - " + .) | join("\n")) else "\n  (none)" end)
     + "
-- **Customer-managed policies** (recreate in target account from customer-policies/<file>, then attach by ARN):"
-    + (if (.customer_managed_policy_arns | length) > 0 then "\n" + ([.customer_managed_policy_arns[]] | map("  - " + . + " → document: customer-policies/" + (split("/") | last) + ".json") | join("\n")) else "\n  (none)" end)
+- **Customer-managed policies** (recreate in target account from file below, then attach by ARN):"
+    + (if (.customer_managed_policy_arns | length) > 0 then "\n" + ([.customer_managed_policy_arns[]] | map("  - " + . + " → customer-policies/" + (split("/") | last) + ".json") | join("\n")) else "\n  (none)" end)
     + "
-- **Inline policy**: " + (if (.inline_policies | length) > 0 then "Yes – copy from permission_sets_to_create.json (key: inline_policies)" else "None" end)
+- **Inline policy**: " + (if (.inline_policies | length) > 0 then "Yes – JSON file(s):\n" + ($inline_files | map("  - " + .) | join("\n")) else "None" end)
     + "
 "
   ' "$PERM_SETS_FILE" 2>/dev/null
@@ -186,7 +209,10 @@ echo -e "${YELLOW}Writing $PACK_MD${NC}"
   echo "| \`sso_roles_audit.json\` | Full audit of each SSO role and attached policies |"
   echo "| \`sso_roles_audit.csv\` | Same audit in table form |"
   echo "| \`customer-policies/manifest.json\` | ARN → filename for custom policies |"
-  echo "| \`customer-policies/<name>.json\` | Policy document for each customer-managed policy (recreate in target account) |"
+  echo "| \`customer-policies/<name>.json\` | Policy document for each customer-managed policy (JSON, recreate in target account) |"
+  echo "| \`customer-policies/inline-<PermissionSet>-<Name>.json\` | Inline policy documents (JSON, one file per inline policy per permission set) |"
+  echo ""
+  echo "All policies are stored as JSON so you can retrieve and reuse them; the rest of this pack is human-readable."
   echo ""
 
 } > "$PACK_MD"
