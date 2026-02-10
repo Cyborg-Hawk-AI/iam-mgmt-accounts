@@ -1,0 +1,8 @@
+# Generated at runtime (do not commit)
+audit/
+aggregated/
+*-iam-discovery.tar.gz
+[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/
+# macOS
+._*
+.DS_Store
