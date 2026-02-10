@@ -17,11 +17,12 @@
 #   --discover-only      Only run discover_iam.sh; skip analyze, reports, upload
 #   --skip-upload        Run discover + analyze + reports but do not upload (for local use)
 #   --bundle             Create {account_id}-iam-discovery.tar.gz for easy download to central
-#   --sso-only           Identity Center migration only: discover only SSO roles (AWSReservedSSO_*)
-#                        and their policies. No IAM users, groups, or non-SSO roles. (Use this for
-#                        IdC user-access migration so we do not go through all IAM roles.)
+#   --sso-only           (DEFAULT) Identity Center migration only: discover only SSO roles
+#                        (AWSReservedSSO_*). No IAM users, groups, or other roles.
+#   --full-iam           Discover all IAM (users, all roles, groups). Use only if you need
+#                        full IAM audit; not needed for IdC migration.
 #
-# Requires: discover_iam.sh or discover_sso_only.sh (when --sso-only), analyze_policies.sh, generate_reports.sh in same directory.
+# Requires: discover_sso_only.sh (default) or discover_iam.sh (with --full-iam), analyze_policies.sh, generate_reports.sh in same directory.
 # For upload: AWS credentials with s3:PutObject on the bucket.
 
 set -euo pipefail
@@ -34,12 +35,17 @@ S3_PREFIX="iam-migration/discovery"
 DISCOVER_ONLY=false
 SKIP_UPLOAD=false
 BUNDLE=false
-SSO_ONLY=false
+# Default: SSO-only (only AWSReservedSSO_* roles). Use --full-iam to scan all IAM users/roles/groups.
+SSO_ONLY=true
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --sso-only)
       SSO_ONLY=true
+      shift
+      ;;
+    --full-iam)
+      SSO_ONLY=false
       shift
       ;;
     --s3-bucket)
@@ -76,7 +82,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}IAM Discovery (CloudShell-per-account)${NC}"
-echo "  For Identity Center migration use: --sso-only (only SSO roles, not all IAM)."
+echo "  Default: SSO-only (only AWSReservedSSO_* roles). Use --full-iam to scan all IAM."
 echo ""
 
 # Resolve account ID (current credentials)
